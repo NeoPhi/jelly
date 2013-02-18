@@ -57,9 +57,59 @@ levels = [
     "x       r xxxx",
     "x   xxxxxxxxxx",
     "xxxxxxxxxxxxxx", ],
+
+  [ "xxxxxxxxxxxxxx",
+    "x            x",
+    "x          r x",
+    "x          x x",
+    "x     b   b  x",
+    "x     x  rr  x",
+    "x         x  x",
+    "x R  Bx x x  x",
+    "x x  xx x x  x",
+    "xxxxxxxxxxxxxx", ],
+
+  [ "xxxxxxxxxxxxxx",
+    "xxxx x  x xxxx",
+    "xxx  g  b  xxx",
+    "xx   x  x   xx",
+    "xx   B  G   xx",
+    "xxg        bxx",
+    "xxxg      bxxx",
+    "xxxx      xxxx",
+    "xxxxxxxxxxxxxx",
+    "xxxxxxxxxxxxxx", ],
+
+  [ "xxxxxxxxxxxxxx",
+    "x            x",
+    "x            x",
+    "x            x",
+    "x            x",
+    "x          rbx",
+    "x    x     xxx",
+    "xb        llxx",
+    "xx  Rx  x xxxx",
+    "xxxxxxxxxxxxxx", ],
+
+  [ "xxxxxxxxxxxxxx",
+    "x   gr       x",
+    "x   ll l     x",
+    "x    x x xxxxx",
+    "x            x",
+    "x  x  x      x",
+    "x        x  Rx",
+    "xx   x     Gxx",
+    "x          xxx",
+    "xxxxxxxxxxxxxx", ],
   ]
 
 CELL_SIZE = 48
+
+unique = (array) ->
+  output = []
+  # naive inefficient implementation
+  output.push jelly for jelly in array when output.indexOf(jelly) == -1
+  return output
 
 moveToCell = (dom, x, y) ->
   dom.style.left = x * CELL_SIZE + 'px'
@@ -78,7 +128,7 @@ class Stage
     for event in ['contextmenu', 'click']
       @dom.addEventListener(event, maybeSwallowEvent, true)
 
-    @checkForMerges()
+    @checkForMerges(true)
 
   loadMap: (map) ->
     table = document.createElement('table')
@@ -90,7 +140,9 @@ class Stage
       for x in [0...row.length]
         color = null
         cell = null
-        switch row[x]
+        value = row[x].toLowerCase()
+        fixed = (value.toUpperCase() == row[x])
+        switch value
           when 'x'
             cell = document.createElement('td')
             cell.className = 'cell wall'
@@ -98,13 +150,14 @@ class Stage
           when 'r' then color = 'red'
           when 'g' then color = 'green'
           when 'b' then color = 'blue'
+          when 'l' then color = 'black'
 
         unless cell
           td = document.createElement('td')
           td.className = 'transparent'
           tr.appendChild(td)
         if color
-          jelly = new Jelly(this, x, y, color)
+          jelly = new Jelly(this, x, y, color, fixed)
           @dom.appendChild(jelly.dom)
           @jellies.push jelly
           cell = jelly
@@ -131,14 +184,29 @@ class Stage
           cell.style[attr] = border unless other and other.tagName == 'TD'
     return
 
-  trySlide: (jelly, dir) ->
-    return if @checkFilled(jelly, dir, 0)
+  canSlide: (jelly, dir) ->
+    return false unless jelly instanceof Jelly
+    obstacles = @checkFilled(jelly, dir, 0)
+    for obstacle in obstacles
+      return false unless @canSlide(obstacle, dir)
+    return true
+
+  slide: (jelly, dir) ->
+    obstacles = @checkFilled(jelly, dir, 0)
+    for obstacle in obstacles
+      @slide(obstacle, dir)
     @busy = true
     @move(jelly, jelly.x + dir, jelly.y)
     jelly.slide dir, () =>
       @checkFall()
       @checkForMerges()
       @busy = false
+
+  trySlide: (jelly, dir) ->
+    if jelly.fixed
+      return false
+    return unless @canSlide(jelly, dir)
+    @slide(jelly, dir)
 
   move: (jelly, targetX, targetY) ->
     @cells[y][x] = null for [x, y] in jelly.cellCoords()
@@ -147,28 +215,36 @@ class Stage
     return
 
   checkFilled: (jelly, dx, dy) ->
+    obstacles = []
     for [x, y] in jelly.cellCoords()
       next = @cells[y + dy][x + dx]
-      return next if next and next != jelly
-    return false
+      if next and next != jelly
+        obstacles.push next
+    unique obstacles
 
   checkFall: ->
     moved = true
     while moved
       moved = false
       for jelly in @jellies
-        if not @checkFilled(jelly, 0, 1)
+        if !jelly.fixed and @checkFilled(jelly, 0, 1).length == 0
           @move(jelly, jelly.x, jelly.y + 1)
           moved = true
     return
 
-  checkForMerges: ->
-    while jelly = @doOneMerge()
+  checkForMerges: (mergeBlack) ->
+    merged = false
+    while jelly = @doOneMerge(mergeBlack)
+      merged = true
       for [x, y] in jelly.cellCoords()
         @cells[y][x] = jelly
+    if merged
+      nonBlack = @jellies.filter (jelly) -> return jelly.color != 'black'
+      colors = unique(nonBlack.map (jelly) -> jelly.color).length
+      alert("Congratulations! Level completed.") if colors == nonBlack.length
     return
 
-  doOneMerge: ->
+  doOneMerge: (mergeBlack) ->
     for jelly in @jellies
       for [x, y] in jelly.cellCoords()
         # Only look right and down; left and up are handled by that side
@@ -177,6 +253,7 @@ class Stage
           other = @cells[y + dy][x + dx]
           continue unless other and other instanceof Jelly
           continue unless other != jelly
+          continue unless mergeBlack or jelly.color != 'black'
           continue unless jelly.color == other.color
           jelly.merge other
           @jellies = @jellies.filter (j) -> j != other
@@ -184,25 +261,28 @@ class Stage
     return null
 
 class JellyCell
-  constructor: (@jelly, @x, @y, color) ->
+  constructor: (@jelly, @x, @y, color, fixed) ->
     @dom = document.createElement('div')
-    @dom.className = 'cell jelly ' + color
-
+    className = 'cell jelly ' + color
+    if fixed
+      className += 'Fixed'
+    @dom.className = className
 
 class Jelly
-  constructor: (stage, @x, @y, @color) ->
+  constructor: (stage, @x, @y, @color, @fixed) ->
     @dom = document.createElement('div')
     @updatePosition(@x, @y)
     @dom.className = 'cell jellybox'
 
-    cell = new JellyCell(this, 0, 0, @color)
+    cell = new JellyCell(this, 0, 0, @color, @fixed)
     @dom.appendChild(cell.dom)
     @cells = [cell]
 
-    @dom.addEventListener 'contextmenu', (e) =>
-      stage.trySlide(this, 1)
-    @dom.addEventListener 'click', (e) =>
-      stage.trySlide(this, -1)
+    if !@fixed
+      @dom.addEventListener 'contextmenu', (e) =>
+        stage.trySlide(this, 1)
+      @dom.addEventListener 'click', (e) =>
+        stage.trySlide(this, -1)
 
   cellCoords: ->
     [@x + cell.x, @y + cell.y] for cell in @cells
@@ -223,6 +303,7 @@ class Jelly
     moveToCell @dom, @x, @y
 
   merge: (other) ->
+    @fixed = @fixed || other.fixed
     # Reposition other's cells as children of this jelly.
     dx = other.x - this.x
     dy = other.y - this.y

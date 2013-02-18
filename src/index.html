@@ -64,13 +64,32 @@ select#level {
   background: hsl(0, 100%, 75%);
   border: solid 1px hsl(0, 100%, 30%);
 }
+.redFixed {
+  background-image: -webkit-linear-gradient(45deg,
+    #ff8888 25%, #fcdfff 25%, #fcdfff 50%, #ff8888 50%, #ff8888 75%, #fcdfff 75%);  
+  border: solid 1px hsl(0, 100%, 30%);
+}
 .blue {
   background: hsl(216, 100%, 70%);
+  border: solid 1px hsl(216, 100%, 30%);
+}
+.blueFixed {
+  background-image: -webkit-linear-gradient(45deg,
+    #66a3ff 25%, #c6deff 25%, #c6deff 50%, #66a3ff 50%, #66a3ff 75%, #c6deff 75%);  
   border: solid 1px hsl(216, 100%, 30%);
 }
 .green {
   background: hsl(120, 100%, 45%);
   border: solid 1px hsl(120, 100%, 30%);
+}
+.greenFixed {
+  background-image: -webkit-linear-gradient(45deg,
+    #00e600 25%, #b5eaaa 25%, #b5eaaa 50%, #00e600 50%, #00e600 75%, #b5eaaa 75%);  
+  border: solid 1px hsl(120, 100%, 30%);
+}
+.black {
+  background: hsl(0, 0%, 50%);
+  border: solid 1px hsl(0, 0%, 10%);
 }
 
 @-webkit-keyframes slideRight {
@@ -118,23 +137,33 @@ great extra details.</p>
 <select id='level'>
   <option value='0'>Level 1</option>
   <option value='1'>Level 2</option>
-  <option value='2'>Level 3 [broken]</option>
+  <option value='2'>Level 3</option>
   <option value='3'>Level 4</option>
   <option value='4'>Level 5</option>
   <option value='5'>Level 6</option>
+  <option value='6'>Level 7</option>
+  <option value='7'>Level 8</option>
+  <option value='8'>Level 9</option>
+  <option value='9'>Level 10</option>
 </select>
 <button id='reset'>Reset</button>
 </div>
 
-<p>How to play: left and right mouse button moves jellies left and
-  right.  When jellies of the same color touch they merge.
-  Your objective is to unify all jellies of the same color.</p>
+<p>How to play:
+  The left and right mouse button moves jellies left and right.
+  When jellies of the same color touch they merge.
+  Your objective is to unify all jellies of the same color.
+  Some jellies can't be moved.
+  Black jellies don't merge and are there just to help.</p>
 
-<p><a href='https://github.com/martine/jelly'>Here's the source</a>.
+<p>
+  <a href='https://github.com/NeoPhi/jelly'>Here's the source.</a> Based on
+  <a href='https://github.com/martine/jelly'>this original source</a>.
   To be implemented:
   <ol>
-    <li>Pushing of blocks (necessary for level 3).</li>
-    <li>A "you win" screen when you win.</li>
+    <li>Beautiful "you win" screen when you win.</li>
+    <li>Beautiful fixed jellies.</li>
+    <li>Rest of the game.</li>
 </ol></p>
 
 <p><small>* It is WebKit-only because CSS prefixes are dumb and I
